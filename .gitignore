@@ -2,3 +2,4 @@
 *.orig
 *.rej
 *.diff
+config.def.h
