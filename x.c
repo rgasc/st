@@ -1312,11 +1312,11 @@ loadff(const char *filename)
  * initialize background image
  */
 void
-bginit()
+bginit(const char *img)
 {
 	XGCValues gcvalues;
 	Drawable bgimg;
-	XImage *bgxi = loadff(bgfile);
+	XImage *bgxi = loadff(img);
 
 	memset(&gcvalues, 0, sizeof(gcvalues));
 	xw.bggc = XCreateGC(xw.dpy, xw.win, 0, &gcvalues);
@@ -1333,6 +1333,34 @@ bginit()
 		MODBIT(xw.attrs.event_mask, 1, PropertyChangeMask);
 		XChangeWindowAttributes(xw.dpy, xw.win, CWEventMask, &xw.attrs);
 	}
+}
+
+void
+setbg() {
+    char resfile[13] = "current_res", currentres[strlen(bgpath) + sizeof(resfile)], resolution[10];
+    snprintf(currentres, sizeof(currentres), "%s/%s", bgpath, resfile);
+
+    FILE *fp = fopen(currentres, "r");
+
+    if (fp == NULL) {
+        strcpy(resolution, "1920x1080");
+    } else {
+        fscanf(fp, "%s", resolution);
+        fclose(fp);
+    }
+
+    char img[strlen(bgpath) + strlen(resolution) + strlen(bgfile) + 6];
+    snprintf(img, sizeof(img), "%s/%s/%s.ff", bgpath, resolution, bgfile);
+    bginit(img);
+}
+
+void
+siginit() {
+    static struct sigaction sa;
+    sa.sa_handler = setbg; /* update bg on SIGUSR1 */
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGUSR1, &sa, NULL);
 }
 
 int
@@ -2260,7 +2288,8 @@ run:
 	rows = MAX(rows, 1);
 	tnew(cols, rows);
 	xinit(cols, rows);
-	bginit();
+    setbg();
+    siginit();
 	xsetenv();
 	selinit();
 	run();
